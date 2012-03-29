@@ -21,7 +21,7 @@ require 'chef/util/windows'
 #wrapper around a subset of the NetGroup* APIs.
 #nothing Chef specific, but not complete enough to be its own gem, so util for now.
 class Chef::Util::Windows::NetGroup < Chef::Util::Windows
-
+  ERROR_MEMBER_IN_ALIAS = 1378
   private
 
   def pack_str(s)
@@ -34,7 +34,7 @@ class Chef::Util::Windows::NetGroup < Chef::Util::Windows
       buffer[offset*PTR_SIZE,PTR_SIZE] = pack_str(multi_to_wide(member))
     end
     rc = func.call(nil, @name, 3, buffer, members.size)
-    if rc != NERR_Success
+    if rc != NERR_Success && rc != ERROR_MEMBER_IN_ALIAS
       raise ArgumentError, get_last_error(rc)
     end
   end
