@@ -61,13 +61,21 @@ class Chef
               #ERROR_MEMBER_IN_ALIAS if a member already exists in the group
               @net_group.local_add_members(@new_resource.members)
             rescue
-              members = @new_resource.members + @current_resource.members
+              members = @new_resource.members.collect {|x| add_domain(x)} + @current_resource.members
               @net_group.local_set_members(members.uniq)
             end
           else
             @net_group.local_set_members(@new_resource.members)
           end
         end
+		
+		def add_domain(member)
+			if !member.include? '\\'
+				return ENV["COMPUTERNAME"] + '\\' + member
+			end
+			member
+		end
+		
         
         def remove_group
           @net_group.local_delete

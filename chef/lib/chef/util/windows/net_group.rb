@@ -21,7 +21,7 @@ require 'chef/util/windows'
 #wrapper around a subset of the NetGroup* APIs.
 #nothing Chef specific, but not complete enough to be its own gem, so util for now.
 class Chef::Util::Windows::NetGroup < Chef::Util::Windows
-  ERROR_MEMBER_IN_ALIAS = 1378
+
   private
 
   def pack_str(s)
@@ -34,7 +34,7 @@ class Chef::Util::Windows::NetGroup < Chef::Util::Windows
       buffer[offset*PTR_SIZE,PTR_SIZE] = pack_str(multi_to_wide(member))
     end
     rc = func.call(nil, @name, 3, buffer, members.size)
-    if rc != NERR_Success && rc != ERROR_MEMBER_IN_ALIAS
+    if rc != NERR_Success
       raise ArgumentError, get_last_error(rc)
     end
   end
@@ -55,15 +55,15 @@ class Chef::Util::Windows::NetGroup < Chef::Util::Windows
       nread = 0.chr * PTR_SIZE
       total = 0.chr * PTR_SIZE
 
-      rc = NetLocalGroupGetMembers.call(nil, @name, 1, ptr, -1,
+      rc = NetLocalGroupGetMembers.call(nil, @name, 2, ptr, -1,
                                         nread, total, handle)
       if (rc == NERR_Success) || (rc == ERROR_MORE_DATA)
         ptr = ptr.unpack('L')[0]
         nread = nread.unpack('i')[0]
-        members = 0.chr * (nread * (PTR_SIZE * 3)) #nread * sizeof(LOCALGROUP_MEMBERS_INFO_1)
+        members = 0.chr * (nread * (PTR_SIZE * 3)) #nread * sizeof(LOCALGROUP_MEMBERS_INFO_2)
         memcpy(members, ptr, members.size)
 
-        #3 pointer fields in LOCALGROUP_MEMBERS_INFO_1, offset 2*PTR_SIZE is lgrmi1_name
+        #3 pointer fields in LOCALGROUP_MEMBERS_INFO_2, offset 2*PTR_SIZE is lgrmi2_domainandname
         nread.times do |i|
           offset = (i * 3) + 2
           member = lpwstr_to_s(members, offset)
@@ -76,7 +76,7 @@ class Chef::Util::Windows::NetGroup < Chef::Util::Windows
     end
     group_members
   end
-
+ 
   def local_add
     rc = NetLocalGroupAdd.call(nil, 0, pack_str(@name), nil)
     if rc != NERR_Success
